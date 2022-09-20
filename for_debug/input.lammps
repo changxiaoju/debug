@@ -1,0 +1,41 @@
+variable        NSTEPS          equal 4000002
+variable        THERMO_FREQ     equal 50
+variable        DUMP_FREQ       equal 50
+variable        TEMP            equal 4000
+variable        TAU_T           equal 0.100000
+variable        TAU_P           equal 0.500000
+
+units           metal
+boundary        p p p
+atom_style      atomic
+
+neighbor        1.0 bin
+
+box          tilt large
+if "${restart} > 0" then "read_restart dpgen.restart.*" else "read_data conf.lmp"
+change_box   all triclinic
+mass            1 4.000000
+mass            2 1.000000
+pair_style      deepmd c016.pb 
+pair_coeff      
+
+thermo_style    custom step temp pe ke etotal press vol lx ly lz xy xz yz
+thermo          ${THERMO_FREQ}
+restart         100000 dpgen.restart
+
+if "${restart} == 0" then "velocity        all create ${TEMP} 33657"
+fix             2 all ipi k4YO6wkgrXAlHpjwpCFl 19934  unix 
+dump            trj all atom 1000 P1.5T4.lammpstrj
+
+# Output variables.
+variable                step equal step
+variable                energy equal pe
+variable                press equal press
+variable                vol equal vol
+
+fix                         OUT all print 100 "${step},${energy},${press},${vol}" &
+                screen no file sepv.csv title 'step,energy,press,vol'
+
+run             ${NSTEPS} upto
+write_data		P1.5T4.lmp
+write_dump	all atom P1.5T4_last.lammpstrj
